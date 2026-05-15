@@ -1,0 +1,47 @@
+name: Frontend CI/CD Pipeline
+
+# 🚀 El pipeline se ejecuta automáticamente ante cambios en estas ramas
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+jobs:
+  build-and-test:
+    name: Construcción y Verificación (React + Vite)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Descargar código del repositorio
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar Node.js (Versión Estable)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm' # ⚡ Optimiza el tiempo usando caché para node_modules
+
+      - name: 📦 Instalar dependencias de forma limpia
+        # npm ci es obligatorio en CI/CD; respeta las versiones exactas del package-lock.json
+        run: npm ci
+
+      - name: 🔍 Validar reglas de estilo y errores (Linter)
+        run: npm run lint --if-present
+
+      - name: 🧪 Ejecutar pruebas unitarias
+        # --passWithNoTests evita que falle si aún no has escrito pruebas
+        run: npm test -- --watchAll=false --passWithNoTests
+
+      - name: 🏗️ Compilar para producción (Build)
+        run: npm run build
+
+      - name: 🐳 Validación Docker (Opcional)
+        # Verifica si el Dockerfile existe antes de intentar construir la imagen
+        run: |
+          if [ -f Dockerfile ]; then
+            docker build -t finanzauto-front:latest .
+            echo "✅ Imagen Docker construida con éxito."
+          else
+            echo "⚠️ No se encontró Dockerfile, saltando paso de Docker."
+          fi
